@@ -1,0 +1,50 @@
+/// Essential directories (use dmlibrary_configure.sh/dmlibrary_server.sh scripts to create them):
+ + dmlibrary -> our books/files
+ + dmqueue -> queue for clients' requests
+ + dmresponse -> it keeps directories of (allowed to use lib) users
+  \ 
+	+ username1
+	+ username2 
+	+ ...
+
+/// Server:
+
+username_who_is_sending_the_request
+search_author
+fragment_of_author_name
+
+username_who_is_sending_the_request
+search_title
+fragment_of_book_title
+
+username_who_is_sending_the_request
+borrow_book
+exact_filename
+
+username_who_is_sending_the_request
+return_book
+exact_filename
+
+username_who_is_sending_the_request
+search_my_library
+
+
+/// Client:
+
+display
+msg_to_display
+
+search_results
+1st_file_to_show
+2nd_file_to_show
+...
+nth_file_to_show
+
+
+/// Books/files:
+ID_Author_Title_userthatownsit
+ID_Author_Title_notborrowed
+
+examples:
+AK1_AndrzejKamien_Opowiesci_marko
+AK2_AndrzejKamien_Opowiescinumer2_notborrowed
