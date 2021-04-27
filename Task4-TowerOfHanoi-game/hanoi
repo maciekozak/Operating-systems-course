@@ -1,0 +1,224 @@
+#!/bin/bash
+#Task 4.1 Tower of Hanoi by Dominik Czerwoniuk & Maciej Kopa (ring = real dir).
+
+#### FUNCTIONS
+
+check_input() {
+        echo "Creating a game of size $starting_size in the directory $game_dir..."
+if (( 2 < starting_size && starting_size < 10 )) #checks if size is 3-9
+then
+        echo "Size correct."
+else
+       echo "Error: Size is not valid. It must be an integer value from 3 to 9! Use hanoi --help."
+       exit
+fi
+
+if [ -d  "$game_dir" ] #checks if dir exists
+then
+  echo "Directory $game_dir exists."
+else
+  echo "Error: Directory does not exist! Use hanoi --help."
+  exit
+fi
+}
+
+create_dirs() {
+	mkdir $game_dir/tower{1..3} #creates dirs
+}
+create_rings() {
+	for i in `seq -w 1 $starting_size`  #print sequence from min to max (1 to starting_size) in equal-width
+	do
+		touch $game_dir/tower1/level$i #creates files
+	done
+}
+create_dirs_rings() {
+	check_input
+	echo "Good luck & have fun :)"
+	create_dirs
+	create_rings
+	print_towers
+}
+remove_all_files() {
+	rm -r $game_dir/tower{1..3} #rm -r remove recursively (so everything connected with this dirs -> files
+}
+
+#this function needs two, single number parameters, source and destination
+move_ring() {
+	#checking if parameters of mv are valid
+	if [[ ($1 == 1 || $1 == 2 || $1 == 3) && ($2 == 1  || $2 == 2 || $2 == 3) && ($1 != $2)]]; then
+		#does our source have a ring
+		#--almost-all lists without . .. fałsz jesli pusta (ls nic nie wypisze) ale ls zawsze cos wypisze, a jak pusty katalog to nic nie wypisze
+		if [[ $(ls --almost-all $game_dir/tower$1) ]]; then
+			#note down the disks
+			smallest_disk_src="$(ls $game_dir/tower$1 | head -1)" #head: output the first part of files, head -1 = level1
+			smallest_disk_dst="$(ls $game_dir/tower$2 | head -1)" #tail od konca
+			#does disk fit the destination or is destination empty
+			if [[ ("$smallest_disk_src" < "$smallest_disk_dst") || (-z "$smallest_disk_dst") ]]; then
+				#the ring will fit on the destination so we  move it there
+				#echo "moving"
+				mv $game_dir/tower$1/$smallest_disk_src $game_dir/tower$2/  #move from source (smallest disk) to destiation
+                ((moves=moves+1))
+				print_towers
+			else
+				echo "The destination cannot fit this ring!"
+			fi
+		else
+			echo "The source does not have any rings!"
+		fi
+	else
+		echo "You cannot make such a move!"
+	fi
+}
+
+#adding protruding sticks when tower is not full
+add_protruding_sticks() {
+awk -v starting_size="$starting_size" ' #-v variable
+	{
+		#number of places without rings
+		protruding_stick=starting_size-NF #liczba elementów NF 
+		my_body=$0
+	} END {
+		for (i = 0; i < protruding_stick; i++)
+			printf "| "
+		print my_body
+	}'
+}
+
+print_towers() {
+	echo ""
+	#gathering each input as one line in variables
+	tower1=$(ls $game_dir/tower1 | awk '{print $1}' ORS=' ') # w jednej lini zapisue ze spacjami (pierwsza kolumne) 
+	tower2=$(ls $game_dir/tower2 | awk '{print $1}' ORS=' ') #$print $0 drukuje wszystko (ale bez znaczenia)
+	tower3=$(ls $game_dir/tower3 | awk '{print $1}' ORS=' ')
+	#empty space - for awk to work properly
+	tower1_s=$(printf "$tower1"" " | add_protruding_sticks) #jak nei ma outputu to dziala dzieki spacji 
+	tower2_s=$(printf "$tower2"" " | add_protruding_sticks)
+	tower3_s=$(printf "$tower3"" " | add_protruding_sticks)
+	towers="${tower1_s}\n${tower2_s}\n${tower3_s}"
+	#remove text "level"
+	graph_tower=$(printf "$towers" | awk '{gsub("level","")}1')  #global substitute levle -> nic, 1 nic nie zmienia (obejscie) 
+	#creating rings "#" and margins "a"
+	graph_tower=$(printf "$graph_tower" | awk '{gsub("['\|']","aaaaaaaaaa|aaaaaaaaa")}1') #\| it works on debian, but on ubuntu mint etc ['\|'] it works, nie interpetuje go systemowo 
+	graph_tower=$(printf "$graph_tower" | awk '{gsub("1", "aaaaaaaaa###aaaaaaaa")}1') #bez jedynki nei drukuje nicm lub bez niczego nei drukuje ogolnie, moze byc nawet 2
+	graph_tower=$(printf "$graph_tower" | awk '{gsub("2", "aaaaaaaa#####aaaaaaa")}1')
+	graph_tower=$(printf "$graph_tower" | awk '{gsub("3", "aaaaaaa#######aaaaaa")}1')
+	graph_tower=$(printf "$graph_tower" | awk '{gsub("4", "aaaaaa#########aaaaa")}1')
+	graph_tower=$(printf "$graph_tower" | awk '{gsub("5", "aaaaa###########aaaa")}1')
+	graph_tower=$(printf "$graph_tower" | awk '{gsub("6", "aaaa#############aaa")}1')
+	graph_tower=$(printf "$graph_tower" | awk '{gsub("7", "aaa###############aa")}1')
+	graph_tower=$(printf "$graph_tower" | awk '{gsub("8", "aa#################a")}1')
+	graph_tower=$(printf "$graph_tower" | awk '{gsub("9", "a###################")}1')
+	#transposing the data
+	graph_tower=$(printf "$graph_tower" | awk '
+	{for (i=1; i<=NF; i++) a[i,NR]=$i; max=(max<NF?NF:max)} END {for (i=1; i<=max; i++) {for (j=1; j<=NR; j++) printf "%s%s", a[i,j], (j==NR?RS:FS) }}
+	')
+	#making margins "invisible"
+	graph_tower=$(printf "$graph_tower" | awk '{gsub("a"," ")}1')
+
+	echo "$graph_tower"
+	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+	echo "tower1: "$tower1
+	echo "tower2: "$tower2
+	echo "tower3: "$tower3
+	echo "Moves : "$moves
+	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+}
+
+spectate() {
+	tower1s=
+	tower2s=
+	tower3s=
+	echo "Welcome to spectate mode. To quit press CTRL+C."
+	while true ; do
+
+	if [[ ! -d "$game_dir/tower1" || ! -d "$game_dir/tower2" || ! -d "$game_dir/tower3" ]] ; then
+	echo "Game ended or there is no active game in $game_dir."
+	exit
+	fi
+
+	tower1=$(ls $game_dir/tower1 | awk '{print $1}' ORS=' ')
+	tower2=$(ls $game_dir/tower2 | awk '{print $1}' ORS=' ')
+	tower3=$(ls $game_dir/tower3 | awk '{print $1}' ORS=' ')
+	if [[ ! ("$tower1" = "$tower1s") || ! ("$tower2" = "$tower2s") || ! ("$tower3" = "$tower3s") ]] ; then 
+	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+	echo "tower1: $tower1"
+	echo "tower2: $tower2"
+	echo "tower3: $tower3"
+	fi
+	tower1s=$tower1
+	tower2s=$tower2
+	tower3s=$tower3
+	sleep 1
+	done
+	exit
+}
+
+helpinst() {
+	echo -e "[Help] Tower of Hanoi: \n > hanoi [-p or --play] <number of disks 3-9> <game directory> \n > hanoi [-v or --version] \n > hanoi [-h or --help]"
+}
+
+version() {
+	echo "Tower of Hanoi Version 1.337 by Dominik Czerwoniuk & Maciej Kopa."
+}
+
+end() {
+	echo "closing game..."
+	sleep 5
+	remove_all_files
+	exit
+}
+
+#### VARIABLES
+
+#path to a folder where the game is to be run
+game_dir=~/
+starting_size=0
+choice_source=0
+choice_dest=0
+moves=0
+
+#### MAIN
+
+if [ "$1" = "" ]; then
+	helpinst
+	exit
+else
+while [ "$1" != "" ]; do
+    case $1 in
+        -p | --play )           shift
+                                starting_size=$1
+				shift
+				game_dir=$1
+				create_dirs_rings
+                                ;;
+	-h | --help )		helpinst
+		                exit
+				;;
+        -v | --version )        version
+                                exit
+                                ;;
+	-w | --watch )          shift
+				game_dir=$1
+				spectate
+				;;
+        * )                     helpinst
+                                exit 1
+    esac
+    shift
+done
+fi
+ 
+while true ; do
+    if [[ -z $(ls -A $game_dir/tower1)  &&  -z $(ls -A $game_dir/tower2) ]] ; then
+    echo "You won in $moves moves!"
+    end
+    fi
+    echo -n -e "Provide move instructions [1, 2, 3] or type 0 to quit.\nFrom: "
+    read choice_source
+    if [ "$choice_source" = "0" ]; then 
+       end
+    fi
+    echo -n "To: "
+    read choice_dest
+    move_ring "$choice_source" "$choice_dest"
+done 
